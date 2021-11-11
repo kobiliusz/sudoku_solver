@@ -1,6 +1,8 @@
 import numpy as np
 import tkinter as tk
 
+NUMS = {1, 2, 3, 4, 5, 6, 7, 8, 9}
+
 board = None
 given = None
 
@@ -13,8 +15,10 @@ def field_check(text):
     return not text or (text.isdigit() and 1 <= int(text) <= 9)
 
 tk_root = tk.Tk()
+tk_root.title("Sudoku Solver")
+check_cmd = (tk_root.register(field_check), '%P')
 reset_state()
-fields = [[tk.Entry(tk_root, width=1, validate='all', validatecommand=(field_check, '%P'))
+fields = [[tk.Entry(tk_root, width=1, validate='all', validatecommand=check_cmd)
            for x in range(9)] for y in range(9)]
 
 for x in range(9):
