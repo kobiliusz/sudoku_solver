@@ -13,6 +13,15 @@ def each_field(what):
         for y in range(9):
             what(x=x, y=y)
 
+def p_of_block(x,y):
+    return 3*int(y/3)+int(x/3)
+
+def field_color(x,y):
+    if p_of_block(x,y) % 2 == 1:
+        return 'white'
+    else:
+        return '#dddddd'
+
 board = None
 
 def reset_state():
@@ -26,14 +35,14 @@ tk_root = tk.Tk()
 tk_root.title("Sudoku Solver")
 check_cmd = (tk_root.register(field_check), '%P')
 reset_state()
-fields = [[tk.Entry(tk_root, width=1, validate='all', validatecommand=check_cmd)
+fields = [[tk.Entry(tk_root, width=1, validate='all', validatecommand=check_cmd, bg=field_color(x,y))
            for x in range(9)] for y in range(9)]
 
 each_field(lambda x,y: fields[x][y].grid(row=y, column=x))
 
 def reset_fields():
     global fields
-    each_field(lambda x, y: fields[x][y].configure(state='normal', bg='white'))
+    each_field(lambda x, y: fields[x][y].configure(state='normal', bg=field_color(x,y)))
     each_field(lambda x, y: fields[x][y].delete(0, tk.END))
     reset_state()
 
