@@ -1,5 +1,7 @@
 import numpy as np
 import tkinter as tk
+import tkinter.messagebox as mb
+import threading as thr
 from abc import *
 
 class BoardError(BaseException):
@@ -26,13 +28,19 @@ board = None
 
 def reset_state():
     global board
-    board = np.empty([9, 9])
+    board = np.zeros([9, 9], dtype=int)
 
 def field_check(text):
     return not text or (text.isdigit() and 1 <= int(text) <= 9)
 
 tk_root = tk.Tk()
 tk_root.title("Sudoku Solver")
+solve_button = None
+reset_button = None
+solve_t = None
+kill_solve = True
+had_error = False
+success = False
 check_cmd = (tk_root.register(field_check), '%P')
 reset_state()
 fields = [[tk.Entry(tk_root, width=1, validate='all', validatecommand=check_cmd, bg=field_color(x,y))
@@ -41,9 +49,11 @@ fields = [[tk.Entry(tk_root, width=1, validate='all', validatecommand=check_cmd,
 each_field(lambda x,y: fields[x][y].grid(row=y, column=x))
 
 def reset_fields():
-    global fields
+    global fields, kill_solve
+    kill_solve = True
     each_field(lambda x, y: fields[x][y].configure(state='normal', bg=field_color(x,y)))
     each_field(lambda x, y: fields[x][y].delete(0, tk.END))
+    solve_button.configure(state='normal')
     reset_state()
 
 reset_button = tk.Button(tk_root, text="Reset", command=reset_fields)
@@ -54,6 +64,8 @@ NUMS = {1, 2, 3, 4, 5, 6, 7, 8, 9}
 class Part(metaclass=ABCMeta):
     def missing(self):
         return NUMS.difference(no_nones(self.vals))
+    def empties(self):
+        return [i for i in range(9) if self.vals[i] == 0]
     @abstractmethod
     def get_x(self, index):
         pass
@@ -64,11 +76,11 @@ class Part(metaclass=ABCMeta):
 
 class Row(Part):
 
-    def __init__(self, board, row_y):
+    def __init__(self, row_y):
         self.row_y = row_y
         self.vals = []
         for x in range(9):
-            if board[x][row_y] is not None and board[x][row_y] in self.vals:
+            if board[x][row_y] != 0 and board[x][row_y] in self.vals:
                 raise BoardError()
             else:
                 self.vals.append(board[x][row_y])
@@ -81,11 +93,11 @@ class Row(Part):
 
 class Column(Part):
 
-    def __init__(self, board, col_x):
+    def __init__(self, col_x):
         self.col_x = col_x
         self.vals = []
         for y in range(9):
-            if board[col_x][y] is not None and board[col_x][y] in self.vals:
+            if board[col_x][y] != 0 and board[col_x][y] in self.vals:
                 raise BoardError()
             else:
                 self.vals.append(board[col_x][y])
@@ -108,13 +120,13 @@ def y_from_p(p):
 
 class Block(Part):
 
-    def __init__(self, board, block_p):
+    def __init__(self, block_p):
         self.block_p = block_p
         self.block_x = x_from_p(block_p) * 3
         self.block_y = y_from_p(block_p) * 3
         self.vals = []
         for p in range(9):
-            if board[self.block_x + x_from_p(p)][self.block_y + y_from_p(p)] is not None and board[self.block_x + x_from_p(p)][self.block_y + y_from_p(p)] in self.vals:
+            if board[self.block_x + x_from_p(p)][self.block_y + y_from_p(p)] != 0 and board[self.block_x + x_from_p(p)][self.block_y + y_from_p(p)] in self.vals:
                 raise BoardError()
             else:
                 self.vals.append(board[self.block_x + x_from_p(p)][self.block_y + y_from_p(p)])
@@ -133,9 +145,36 @@ def copy_field(x,y):
 
 
 def solve():
-    each_field(lambda x, y: copy_field(x, y))
+    global kill_solve, had_error, success
+    kill_solve = False
+    try:
+        solve_button.configure(state='disabled')
+        each_field(lambda x, y: copy_field(x, y))
+        while True:
+            if kill_solve:
+                return
+            rows = [Row(i) for i in range(9)]
+            cols = [Column(i) for i in range(9)]
+            blocks = [Block(i) for i in range(9)]
 
-solve_button = tk.Button(tk_root, text="Solve", command=solve)
+    except BoardError:
+        had_error = True
+        reset_fields()
+
+def solve_thread():
+    global solve_t, had_error, success
+    solve_t = thr.Thread(target=solve)
+    solve_t.start()
+    while solve_t.is_alive():
+        tk_root.update()
+    if had_error:
+        had_error = False
+        mb.showerror(title='Board Error', message='Unable to solve puzzle.')
+    elif success:
+        mb.showinfo(title='Success!', message='Puzzle solved.')
+
+solve_button = tk.Button(tk_root, text="Solve", command=solve_thread)
 solve_button.grid(row=9, column=5, columnspan=4, pady=5)
 
+tk_root.resizable(False, False)
 tk_root.mainloop()
