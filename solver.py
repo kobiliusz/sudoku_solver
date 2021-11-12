@@ -144,18 +144,59 @@ def copy_field(x,y):
     fields[x][y].configure(state='disabled')
 
 
+def fill_field(x, y, no):
+    global fields
+    fields[x][y].configure(state='normal')
+    fields[x][y].insert(0, str(no))
+    fields[x][y].configure(state='disabled')
+
+
 def solve():
-    global kill_solve, had_error, success
+    global kill_solve, had_error, success, board
     kill_solve = False
     try:
         solve_button.configure(state='disabled')
         each_field(lambda x, y: copy_field(x, y))
+        found = True
         while True:
             if kill_solve:
                 return
+            if not found:
+                raise BoardError()
+            found = False
             rows = [Row(i) for i in range(9)]
             cols = [Column(i) for i in range(9)]
             blocks = [Block(i) for i in range(9)]
+            parts = [*rows, *cols, *blocks]
+            parts.sort(key=lambda part: len(part.missing()))
+            if (len(parts[len(parts)-1].missing()) == 0):
+                success = True
+                return
+            for part in parts:
+                if kill_solve:
+                    return
+                for missingno in part.missing():
+                    if kill_solve:
+                        return
+                    fits = []
+                    for ind in part.empties():
+                        if kill_solve:
+                            return
+                        empty_x = part.get_x(ind)
+                        empty_y = part.get_y(ind)
+                        empty_p = p_of_block(empty_x, empty_y)
+                        if missingno in rows[empty_y].missing() and missingno in cols[empty_x].missing() and missingno in blocks[empty_p].missing():
+                            fits.append(ind)
+                    if len(fits) == 0:
+                        raise BoardError()
+                    elif len(fits) == 1:
+                        n = fits[0]
+                        board[part.get_x(n)][part.get_y(n)] = missingno
+                        fill_field(part.get_x(n),part.get_y(n),missingno)
+                        found = True
+                        break
+                if found:
+                    break
 
     except BoardError:
         had_error = True
@@ -171,6 +212,7 @@ def solve_thread():
         had_error = False
         mb.showerror(title='Board Error', message='Unable to solve puzzle.')
     elif success:
+        each_field(lambda x, y: fields[x][y].configure(state='normal'))
         mb.showinfo(title='Success!', message='Puzzle solved.')
 
 solve_button = tk.Button(tk_root, text="Solve", command=solve_thread)
