@@ -33,7 +33,8 @@ each_field(lambda x,y: fields[x][y].grid(row=y, column=x))
 
 def reset_fields():
     global fields
-    each_field(lambda x,y: fields[x][y].delete(0,tk.END))
+    each_field(lambda x, y: fields[x][y].configure(state='normal', bg='white'))
+    each_field(lambda x, y: fields[x][y].delete(0, tk.END))
     reset_state()
 
 reset_button = tk.Button(tk_root, text="Reset", command=reset_fields)
@@ -114,8 +115,16 @@ class Block(Part):
     def get_y(self, index):
         return self.block_y + y_from_p(index)
 
+def copy_field(x,y):
+    global fields, board
+    if fields[x][y].get():
+        board[x][y] = int(fields[x][y].get())
+        fields[x][y].configure(bg='#00aa00')
+    fields[x][y].configure(state='disabled')
+
+
 def solve():
-    pass
+    each_field(lambda x, y: copy_field(x, y))
 
 solve_button = tk.Button(tk_root, text="Solve", command=solve)
 solve_button.grid(row=9, column=5, columnspan=4, pady=5)
