@@ -19,12 +19,12 @@ def each_field(what):
             what(x=x, y=y)
 
 
-def p_of_block(x,y):
+def p_of_block(x, y):
     return 3*int(y/3)+int(x/3)
 
 
-def field_color(x,y):
-    if p_of_block(x,y) % 2 == 1:
+def field_color(x, y):
+    if p_of_block(x, y) % 2 == 1:
         return 'white'
     else:
         return '#dddddd'
@@ -55,7 +55,7 @@ reset_state()
 fields = [[tk.Entry(tk_root, width=1, validate='all', validatecommand=check_cmd, bg=field_color(x,y))
            for x in range(9)] for y in range(9)]
 
-each_field(lambda x,y: fields[x][y].grid(row=y, column=x))
+each_field(lambda x, y: fields[x][y].grid(row=y, column=x))
 
 
 def reset_fields():
@@ -158,7 +158,7 @@ class Block(Part):
         return self.block_y + y_from_p(index)
 
 
-def copy_field(x,y):
+def copy_field(x, y):
     global fields, board
     if fields[x][y].get():
         board[x][y] = int(fields[x][y].get())
@@ -214,7 +214,7 @@ def solve():
                     elif len(fits) == 1:
                         n = fits[0]
                         board[part.get_x(n)][part.get_y(n)] = missingno
-                        fill_field(part.get_x(n),part.get_y(n),missingno)
+                        fill_field(part.get_x(n), part.get_y(n), missingno)
                         found = True
                         break
                 if found:
