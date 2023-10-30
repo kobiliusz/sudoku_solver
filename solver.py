@@ -4,19 +4,24 @@ import tkinter.messagebox as mb
 import threading as thr
 from abc import *
 
+
 class BoardError(BaseException):
     pass
 
+
 def no_nones(list):
     return {i for i in list if i}
+
 
 def each_field(what):
     for x in range(9):
         for y in range(9):
             what(x=x, y=y)
 
+
 def p_of_block(x,y):
     return 3*int(y/3)+int(x/3)
+
 
 def field_color(x,y):
     if p_of_block(x,y) % 2 == 1:
@@ -24,14 +29,18 @@ def field_color(x,y):
     else:
         return '#dddddd'
 
+
 board = None
+
 
 def reset_state():
     global board
     board = np.zeros([9, 9], dtype=int)
 
+
 def field_check(text):
     return not text or (text.isdigit() and 1 <= int(text) <= 9)
+
 
 tk_root = tk.Tk()
 tk_root.title("Sudoku Solver")
@@ -48,6 +57,7 @@ fields = [[tk.Entry(tk_root, width=1, validate='all', validatecommand=check_cmd,
 
 each_field(lambda x,y: fields[x][y].grid(row=y, column=x))
 
+
 def reset_fields():
     global fields, kill_solve
     kill_solve = True
@@ -56,19 +66,25 @@ def reset_fields():
     solve_button.configure(state='normal')
     reset_state()
 
+
 reset_button = tk.Button(tk_root, text="Reset", command=reset_fields)
 reset_button.grid(row=9, column=0, columnspan=4, pady=5)
 
 NUMS = {1, 2, 3, 4, 5, 6, 7, 8, 9}
 
+
 class Part(metaclass=ABCMeta):
+
     def missing(self):
         return NUMS.difference(no_nones(self.vals))
+
     def empties(self):
         return [i for i in range(9) if self.vals[i] == 0]
+
     @abstractmethod
     def get_x(self, index):
         pass
+
     @abstractmethod
     def get_y(self, index):
         pass
@@ -87,6 +103,7 @@ class Row(Part):
 
     def get_x(self, index):
         return index
+
     def get_y(self, index):
         return self.row_y
 
@@ -104,6 +121,7 @@ class Column(Part):
 
     def get_x(self, index):
         return self.col_x
+
     def get_y(self, index):
         return index
 
@@ -115,8 +133,10 @@ class Column(Part):
 def x_from_p(p):
     return p % 3
 
+
 def y_from_p(p):
     return int(p / 3)
+
 
 class Block(Part):
 
@@ -133,8 +153,10 @@ class Block(Part):
 
     def get_x(self, index):
         return self.block_x + x_from_p(index)
+
     def get_y(self, index):
         return self.block_y + y_from_p(index)
+
 
 def copy_field(x,y):
     global fields, board
@@ -169,7 +191,7 @@ def solve():
             blocks = [Block(i) for i in range(9)]
             parts = [*rows, *cols, *blocks]
             parts.sort(key=lambda part: len(part.missing()))
-            if (len(parts[len(parts)-1].missing()) == 0):
+            if len(parts[len(parts)-1].missing()) == 0:
                 success = True
                 return
             for part in parts:
@@ -202,6 +224,7 @@ def solve():
         had_error = True
         reset_fields()
 
+
 def solve_thread():
     global solve_t, had_error, success
     solve_t = thr.Thread(target=solve)
@@ -214,6 +237,7 @@ def solve_thread():
     elif success:
         each_field(lambda x, y: fields[x][y].configure(state='normal'))
         mb.showinfo(title='Success!', message='Puzzle solved.')
+
 
 solve_button = tk.Button(tk_root, text="Solve", command=solve_thread)
 solve_button.grid(row=9, column=5, columnspan=4, pady=5)
