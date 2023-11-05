@@ -1,9 +1,11 @@
 from dataclasses import dataclass
+from typing import List
 import numpy as np
 import tkinter as tk
 import tkinter.messagebox as mb
 import threading as thr
 from abc import *
+from icecream import ic
 
 
 class BoardError(BaseException):
@@ -79,6 +81,12 @@ class FillCandidate:
     x: int
     y: int
     no: int
+
+
+@dataclass
+class SaveState:
+    saved_board: np.ndarray
+    fitting: List[FillCandidate]
 
 
 class Part(metaclass=ABCMeta):
@@ -174,12 +182,38 @@ def copy_field(x, y):
         fields[x][y].configure(bg='#00aa00')
     fields[x][y].configure(state='disabled')
 
+def reverse_copy_field(x, y):
+    global fields, board
+    fields[x][y].configure(state='normal')
+    fields[x][y].delete(0, tk.END)
+    fields[x][y].insert(0, str(board[x][y]) if board[x][y] else '')
+    fields[x][y].configure(state='disabled')
+
 
 def fill_field(x, y, no):
     global fields
     fields[x][y].configure(state='normal')
     fields[x][y].insert(0, str(no))
     fields[x][y].configure(state='disabled')
+
+
+def restore(save_points):
+    global board
+    if not len(save_points):
+        raise BoardError()
+    while len(save_points):
+        save_point: SaveState = save_points.pop()
+        if not len(save_point.fitting):
+            continue
+        fit: FillCandidate = save_point.fitting.pop()
+        restored_board = np.copy(save_point.saved_board)
+        save_points.append(save_point)
+        board = restored_board
+        board[fit.x][fit.y] = fit.no
+        each_field(reverse_copy_field)
+        break
+    else:
+        raise BoardError()
 
 
 def solve():
@@ -189,15 +223,16 @@ def solve():
         solve_button.configure(state='disabled')
         each_field(lambda x, y: copy_field(x, y))
         found = True
+        save_points = []
         while True:
             if kill_solve:
                 return
             if not found:
-                board[best_fill.x][best_fill.y] = best_fill.no
-                fields[best_fill.x][best_fill.y].configure(bg='#aaaa00')
-                fill_field(best_fill.x, best_fill.y, best_fill.no)
+                save_points.append(SaveState(saved_board=np.copy(board), fitting=best_fill[1:]))
+                board[best_fill[0].x][best_fill[0].y] = best_fill[0].no
+                fill_field(best_fill[0].x, best_fill[0].y, best_fill[0].no)
             best_len = 10
-            best_fill: FillCandidate = None
+            best_fill = []
             found = False
             rows = [Row(i) for i in range(9)]
             cols = [Column(i) for i in range(9)]
@@ -224,7 +259,9 @@ def solve():
                                 in blocks[empty_p].missing()):
                             fits.append(ind)
                     if len(fits) == 0:
-                        raise BoardError()
+                        restore(save_points)
+                        found = True
+                        break
                     elif len(fits) == 1:
                         n = fits[0]
                         board[part.get_x(n)][part.get_y(n)] = missingno
@@ -233,8 +270,7 @@ def solve():
                         break
                     elif len(fits) < best_len:
                         best_len = len(fits)
-                        n = fits[0]
-                        best_fill = FillCandidate(x=part.get_x(n), y=part.get_y(n), no=missingno)
+                        best_fill = [FillCandidate(x=part.get_x(n), y=part.get_y(n), no=missingno) for n in fits]
                 if found:
                     break
 

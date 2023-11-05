@@ -1,3 +1,3 @@
 # sudoku_solver
  
-Solves sudoku puzzles.
+Solves all solvable sudoku puzzles.
