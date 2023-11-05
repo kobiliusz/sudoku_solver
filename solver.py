@@ -1,3 +1,4 @@
+from dataclasses import dataclass
 import numpy as np
 import tkinter as tk
 import tkinter.messagebox as mb
@@ -73,6 +74,13 @@ reset_button.grid(row=9, column=0, columnspan=4, pady=5)
 NUMS = {1, 2, 3, 4, 5, 6, 7, 8, 9}
 
 
+@dataclass
+class FillCandidate:
+    x: int
+    y: int
+    no: int
+
+
 class Part(metaclass=ABCMeta):
 
     def missing(self):
@@ -146,7 +154,8 @@ class Block(Part):
         self.block_y = y_from_p(block_p) * 3
         self.vals = []
         for p in range(9):
-            if board[self.block_x + x_from_p(p)][self.block_y + y_from_p(p)] != 0 and board[self.block_x + x_from_p(p)][self.block_y + y_from_p(p)] in self.vals:
+            if (board[self.block_x + x_from_p(p)][self.block_y + y_from_p(p)] != 0
+                    and board[self.block_x + x_from_p(p)][self.block_y + y_from_p(p)] in self.vals):
                 raise BoardError()
             else:
                 self.vals.append(board[self.block_x + x_from_p(p)][self.block_y + y_from_p(p)])
@@ -184,7 +193,11 @@ def solve():
             if kill_solve:
                 return
             if not found:
-                raise BoardError()
+                board[best_fill.x][best_fill.y] = best_fill.no
+                fields[best_fill.x][best_fill.y].configure(bg='#aaaa00')
+                fill_field(best_fill.x, best_fill.y, best_fill.no)
+            best_len = 10
+            best_fill: FillCandidate = None
             found = False
             rows = [Row(i) for i in range(9)]
             cols = [Column(i) for i in range(9)]
@@ -207,7 +220,8 @@ def solve():
                         empty_x = part.get_x(ind)
                         empty_y = part.get_y(ind)
                         empty_p = p_of_block(empty_x, empty_y)
-                        if missingno in rows[empty_y].missing() and missingno in cols[empty_x].missing() and missingno in blocks[empty_p].missing():
+                        if (missingno in rows[empty_y].missing() and missingno in cols[empty_x].missing() and missingno
+                                in blocks[empty_p].missing()):
                             fits.append(ind)
                     if len(fits) == 0:
                         raise BoardError()
@@ -217,6 +231,10 @@ def solve():
                         fill_field(part.get_x(n), part.get_y(n), missingno)
                         found = True
                         break
+                    elif len(fits) < best_len:
+                        best_len = len(fits)
+                        n = fits[0]
+                        best_fill = FillCandidate(x=part.get_x(n), y=part.get_y(n), no=missingno)
                 if found:
                     break
 
