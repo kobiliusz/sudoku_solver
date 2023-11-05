@@ -182,6 +182,7 @@ def copy_field(x, y):
         fields[x][y].configure(bg='#00aa00')
     fields[x][y].configure(state='disabled')
 
+
 def reverse_copy_field(x, y):
     global fields, board
     fields[x][y].configure(state='normal')
